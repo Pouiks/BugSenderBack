@@ -1,14 +1,24 @@
+// routes/authRoutes.js
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser, getUserProfile } = require('../controllers/authController');
 
-// Route pour l'inscription (POST /api/auth/register)
-router.post('/register', registerUser);
+// Exemple de données d'utilisateur pour la démonstration
+const mockUser = {
+  username: 'AdminUser',
+  role: 'admin',
+  email: 'admin@example.com'
+};
 
-// Route pour la connexion (POST /api/auth/login)
-router.post('/login', loginUser);
+// Exemple de route de connexion
+router.post('/login', (req, res) => {
+  const { email, password } = req.body;
 
-// Route pour obtenir le profil de l'utilisateur connecté (GET /api/auth/profile)
-router.get('/profile', getUserProfile);
+  // Logique de vérification d'authentification à implémenter
+  if (email === mockUser.email && password === 'password123') {
+    res.status(200).json({ user: mockUser });
+  } else {
+    res.status(401).json({ message: 'Identifiants incorrects' });
+  }
+});
 
 module.exports = router;

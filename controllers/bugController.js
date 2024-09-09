@@ -36,7 +36,6 @@ exports.createBug = async (req, res) => {
           createdBy,
           createdAt,
           bugs,
-          license
       });
 
       res.status(201).json({ message: 'Bug créé avec succès', bugId: result.insertedId });
