@@ -1,19 +1,16 @@
 // routes/bugRoutes.js
 const express = require('express');
-const { getAllBugs, createBug } = require('../controllers/bugController');
-const { requireAuth } = require('../middlewares/authMiddleware');
-const { checkAdmin } = require('../middlewares/roleMiddleware');
 const router = express.Router();
+const { verifyToken } = require('../middleware/authMiddleware'); // Assurez-vous que ce middleware existe
+const { getBugsByDomain, getAllBugs, createBug } = require('../controllers/bugController');
 
-// Administrateurs : voir tous les bugs
-router.get('/admin', requireAuth, checkAdmin, getAllBugs); // Route pour voir tous les bugs (admin)
+// Route pour récupérer les bugs par domaine
+router.get('/domain/:domainName', verifyToken, getBugsByDomain); // Vérifiez que la route est correcte
 
-// Clients : voir uniquement les bugs de leur domaine
-router.get('/', requireAuth, (req, res) => {
-  const { domain } = req;
-  getAllBugs(req, res, domain); // Filtrer par domaine pour les clients
-});
+// Route pour récupérer tous les bugs (accessible uniquement aux administrateurs)
+router.get('/', verifyToken, getAllBugs);
 
-router.post('/', requireAuth, createBug); // Créer un bug, accessible à tous les utilisateurs connectés
+// Route pour créer un nouveau bug (accessible uniquement aux administrateurs)
+router.post('/', verifyToken, createBug);
 
 module.exports = router;

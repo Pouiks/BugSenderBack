@@ -1,11 +1,12 @@
 // routes/authRoutes.js
 const express = require('express');
 const { registerUser, login, getUserProfile } = require('../controllers/authController');
-const { requireAuth } = require('../middlewares/authMiddleware'); // Importer le middleware requireAuth
+const { verifyToken } = require('../middleware/authMiddleware'); // Importer le middleware de vérification de token
+
 const router = express.Router();
 
 router.post('/register', registerUser);
 router.post('/login', login);
-router.get('/profile', requireAuth, getUserProfile); // Utiliser requireAuth pour vérifier l'authentification
+router.get('/profile', verifyToken, getUserProfile); // Utiliser 'verifyToken' pour vérifier l'authentification
 
 module.exports = router;

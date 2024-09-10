@@ -17,7 +17,23 @@ exports.getAllBugs = async (req, res, domainFilter = null) => {
     res.status(500).json({ message: 'Erreur serveur lors de la récupération des bugs' });
   }
 };
-
+exports.getBugsByDomain = async (req, res) => {
+  const domainName = req.params.domainName;  // Récupère le domaine de l'utilisateur à partir de l'URL
+  try {
+    const db = await connectDB();
+    const bugsCollection = db.collection('DomainsWithBugs');
+    const domainBugs = await bugsCollection.findOne({ domainName });
+    console.log(domainBugs);
+    if (!domainBugs) {
+      return res.status(404).json({ message: 'Aucun bug trouvé pour ce domaine.' });
+    }
+    console.log(domainBugs.bugs)
+    res.json(domainBugs.bugs);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des bugs par domaine:', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération des bugs.' });
+  }
+};
 
 exports.createBug = async (req, res) => {
   try {
@@ -43,3 +59,4 @@ exports.createBug = async (req, res) => {
       res.status(500).json({ message: 'Erreur serveur lors de la création du bug' });
   }
 };
+
