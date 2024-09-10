@@ -1,24 +1,23 @@
 // controllers/bugController.js
 const connectDB = require('../config/db');
 
-exports.getAllBugs = async (req, res) => {
-  console.log("Début de la fonction getAllBugs()");
+// controllers/bugController.js
+exports.getAllBugs = async (req, res, domainFilter = null) => {
   try {
-    const db = await connectDB(); // Connexion à la base de données
-    console.log("Connexion à la DB réussie.");
-    const bugsCollection = db.collection('DomainsWithBugs'); // Accès à la collection 'DomainsWithBugs'
-    console.log("Accès à la collection DomainsWithBugs.");
-    
-    // Utilisez toArray() pour convertir le curseur en tableau de documents
-    const bugs = await bugsCollection.find().toArray(); 
-    console.log("Bugs trouvés :", bugs);
+    const db = await connectDB();
+    const bugsCollection = db.collection('DomainsWithBugs');
+
+    // Filtrer les bugs par domaine si un domaine est spécifié
+    const query = domainFilter ? { domainName: domainFilter } : {};
+    const bugs = await bugsCollection.find(query).toArray();
     
     res.json(bugs);
   } catch (error) {
     console.error('Erreur lors de la récupération des bugs:', error);
-    res.status(500).json({ message: "Erreur serveur lors de la récupération des bugs", error: error.message });
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération des bugs' });
   }
 };
+
 
 exports.createBug = async (req, res) => {
   try {

@@ -1,7 +1,9 @@
 // controllers/userController.js
+const bcrypt = require('bcrypt');
+const mongodb = require('mongodb'); // Ajouté pour l'utilisation des ObjectId
 const connectDB = require('../config/db');  // Importation de la connexion à la base de données
 
-// Obtenir tous les utilisateurs
+// Obtenir tous les utilisateurs (uniquement pour les administrateurs)
 exports.getAllUsers = async (req, res) => {
   try {
     const db = await connectDB();
@@ -14,39 +16,51 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// Créer un nouvel utilisateur
+// Création d'un nouvel utilisateur par un administrateur
 exports.createUser = async (req, res) => {
-  try {
-    const { email, username, role, password } = req.body;
-    const db = await connectDB();
-    const usersCollection = db.collection('Users');
+  const { username, email, password, role, domain } = req.body;
 
-    const user = {
-      email,
+  try {
+    const db = await connectDB();
+    const userCollection = db.collection('Users');
+
+    // Vérifier si l'utilisateur existe déjà
+    const existingUser = await userCollection.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'L\'utilisateur existe déjà' });
+    }
+
+    // Hashage du mot de passe
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Création de l'utilisateur
+    const newUser = {
       username,
+      email,
+      password: hashedPassword,
       role,
-      password,  // Assurez-vous que le mot de passe est hashé avant l'insertion
-      license: {
-        licenseKey: "DEFAULT_LICENSE_KEY",  // Utiliser une valeur par défaut ou une logique pour générer la clé
-        startDate: new Date().toISOString(),  // Date de début
-        endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),  // Date de fin de validité par défaut à 1 an
-        status: "active"
-      }
+      domain,
+      createdAt: new Date(),
     };
 
-    const result = await usersCollection.insertOne(user);
-    res.status(201).json({ message: 'Utilisateur créé avec succès', userId: result.insertedId });
+    const result = await userCollection.insertOne(newUser);
+
+    res.status(201).json({
+      message: 'Utilisateur créé avec succès',
+      userId: result.insertedId,
+      user: newUser,
+    });
   } catch (error) {
     console.error('Erreur lors de la création de l\'utilisateur:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la création de l\'utilisateur' });
   }
 };
 
-// Mettre à jour un utilisateur
+// Mise à jour d'un utilisateur
 exports.updateUser = async (req, res) => {
   try {
     const userId = req.params.id;
-    const { email, username, role, password, license } = req.body;  // Les champs que vous souhaitez mettre à jour
+    const { email, username, role, password, domain, license } = req.body;  // Les champs que vous souhaitez mettre à jour
     const db = await connectDB();
     const usersCollection = db.collection('Users');
 
@@ -54,7 +68,8 @@ exports.updateUser = async (req, res) => {
       ...(email && { email }),
       ...(username && { username }),
       ...(role && { role }),
-      ...(password && { password }),  // Assurez-vous que le mot de passe est hashé
+      ...(domain && { domain }), // Mise à jour du domaine
+      ...(password && { password: await bcrypt.hash(password, 10) }),  // Assurez-vous que le mot de passe est hashé
       ...(license && { license })
     };
 
@@ -63,5 +78,26 @@ exports.updateUser = async (req, res) => {
   } catch (error) {
     console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la mise à jour de l\'utilisateur' });
+  }
+};
+
+exports.updateOwnProfile = async (req, res) => {
+  try {
+    const userId = req.userId; // Récupérer l'ID de l'utilisateur connecté
+    const { email, username, password } = req.body; // Champs modifiables par l'utilisateur
+    const db = await connectDB();
+    const usersCollection = db.collection('Users');
+
+    const updateData = {
+      ...(email && { email }),
+      ...(username && { username }),
+      ...(password && { password: await bcrypt.hash(password, 10) }), // Hashage du mot de passe si modifié
+    };
+
+    await usersCollection.updateOne({ _id: new mongodb.ObjectId(userId) }, { $set: updateData });
+    res.status(200).json({ message: 'Profil mis à jour avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du profil:', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la mise à jour du profil' });
   }
 };
