@@ -50,9 +50,10 @@ exports.login = async (req, res) => {
     // Générer un token JWT incluant le rôle et le domaine de l'utilisateur
     const token = jwt.sign(
       { userId: user._id, role: user.role, domain: user.domain },
-      process.env.JWT_SECRET,
+      process.env.JWT_TOKEN,
       { expiresIn: '1h' }
     );
+    console.log(token)
 
     res.status(200).json({
       message: 'Connexion réussie',

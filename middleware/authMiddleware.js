@@ -46,7 +46,7 @@ exports.verifyToken = (req, res, next) => {
   }
 
   const token = authHeader.split(' ')[1];
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  jwt.verify(token, process.env.JWT_TOKEN, (err, user) => {
     if (err) {
       console.log('Token verification failed:', err);
       return res.status(403).json({ message: 'Invalid token' });

@@ -12,5 +12,6 @@ router.get('/', verifyToken, getAllBugs);
 
 // Route pour créer un nouveau bug (accessible uniquement aux administrateurs)
 router.post('/', verifyToken, createBug);
+// router.post('/',  createBug);
 
 module.exports = router;

@@ -12,7 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-    origin: ['chrome-extension://ekkekjfbiokljeofbaehnencomknhlla',"http://localhost:5173"],
+    origin: ['chrome-extension://ekkekjfbiokljeofbaehnencomknhlla',"http://localhost:5173", "chrome-extension://igolmegnbbgomaddaomlgklhccdpdock"],
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Méthodes HTTP autorisées
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
