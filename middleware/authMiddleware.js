@@ -1,5 +1,6 @@
 // middlewares/authMiddleware.js
-const jwt = require('jsonwebtoken');
+
+const jwt = require('jsonwebtoken'); // Ajoute cette ligne si elle manque
 
 exports.verifyToken = (req, res, next) => {
   const token = req.cookies.token; // Récupérer le token du cookie
@@ -10,8 +11,9 @@ exports.verifyToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_TOKEN);
+    const decoded = jwt.verify(token, process.env.JWT_TOKEN); // Utilisation correcte de `jwt.verify`
     req.user = decoded; // Attacher les informations utilisateur à l'objet de requête
+    console.log('Utilisateur authentifié:', req.user);  // Ajouter un log ici
     next();
   } catch (error) {
     console.log('Token verification failed:', error);

@@ -2,38 +2,51 @@
 const connectDB = require('../config/db');
 
 // controllers/bugController.js
-exports.getAllBugs = async (req, res, domainFilter = null) => {
+// controllers/bugController.js
+exports.getAllBugs = async (req, res) => {
   try {
     const db = await connectDB();
     const bugsCollection = db.collection('DomainsWithBugs');
 
-    // Filtrer les bugs par domaine si un domaine est spécifié
-    const query = domainFilter ? { domainName: domainFilter } : {};
-    const bugs = await bugsCollection.find(query).toArray();
-    
-    res.json(bugs);
+    // Récupérer tous les bugs de la collection
+    const allBugs = await bugsCollection.find({}).toArray(); // Récupère tous les documents de la collection
+    console.log("Tout les bugs: ", allBugs)
+    // Combiner tous les bugs si chaque document a un champ `bugs`
+    const bugs = allBugs.flatMap(doc => doc.bugs || []);
+
+    console.log("Bugs récupérés:", bugs);  // Ajoute ce log pour voir les bugs récupérés
+
+    res.status(200).json(bugs);
   } catch (error) {
-    console.error('Erreur lors de la récupération des bugs:', error);
-    res.status(500).json({ message: 'Erreur serveur lors de la récupération des bugs' });
+    console.error('Erreur lors de la récupération de tous les bugs:', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération de tous les bugs.' });
   }
 };
+
 exports.getBugsByDomain = async (req, res) => {
-  const domainName = req.params.domainName;  // Récupère le domaine de l'utilisateur à partir de l'URL
+  const domainName = req.params.domainName; // Récupère le domaine de l'utilisateur à partir de l'URL
+
   try {
     const db = await connectDB();
     const bugsCollection = db.collection('DomainsWithBugs');
-    const domainBugs = await bugsCollection.findOne({ domainName });
-    console.log(domainBugs);
-    if (!domainBugs) {
+
+    // Utiliser `find` pour récupérer tous les documents correspondants
+    const domainBugs = await bugsCollection.find({ domainName }).toArray(); // Utilise `find` au lieu de `findOne`
+
+    if (!domainBugs.length) { // Vérifier s'il n'y a pas de résultats
       return res.status(404).json({ message: 'Aucun bug trouvé pour ce domaine.' });
     }
-    console.log(domainBugs.bugs)
-    res.json(domainBugs.bugs);
+
+    // Si tu veux récupérer uniquement le champ `bugs` de chaque document
+    const bugs = domainBugs.flatMap(doc => doc.bugs); // Combine tous les `bugs` de chaque document en un seul tableau
+    res.json(bugs);
+
   } catch (error) {
     console.error('Erreur lors de la récupération des bugs par domaine:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la récupération des bugs.' });
   }
 };
+
 
 exports.createBug = async (req, res) => {
   try {

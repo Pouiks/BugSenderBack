@@ -14,4 +14,4 @@ async function hashPassword(plainPassword) {
 // email: test@test.com
 // password: test123!
 // hashed: $2b$10$pMVl2qz.qjoKstPBnxCPvevfzVfTmmwYetumhCEwuvV/1r6KXYVdm
-hashPassword('test123!'); // Remplacez 'your_secure_password' par votre mot de passe souhaité
+// hashPassword('test123!'); // Remplacez 'your_secure_password' par votre mot de passe souhaité
