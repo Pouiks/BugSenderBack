@@ -6,13 +6,13 @@ const {
   updateUser,
   getUserProfile, // Ajout correct de l'import
 } = require('../controllers/userController'); // Correctement importé à partir du fichier userController
-const { verifyToken, isAdmin } = require('../middleware/authMiddleware');
-
+const { verifyToken } = require('../middleware/authMiddleware');
+const { checkAdmin} = require('../middleware/roleMiddleware');
 const router = express.Router();
 
-router.get('/all', verifyToken, isAdmin, getAllUsers);
-router.post('/create', verifyToken, isAdmin, createUser);
-router.put('/update/:id', verifyToken, isAdmin, updateUser);
+router.get('/all', verifyToken, checkAdmin, getAllUsers);
+router.post('/create', verifyToken, checkAdmin, createUser);
+router.put('/update/:id', verifyToken, checkAdmin, updateUser);
 router.get('/profile', verifyToken, getUserProfile); // Route pour obtenir le profil utilisateur
 
 module.exports = router;

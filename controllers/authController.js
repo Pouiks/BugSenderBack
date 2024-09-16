@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const connectDB = require('../config/db');
 const mongodb = require('mongodb');
 
+// Méthode d'enregistrement d'utilisateur
 exports.registerUser = async (req, res) => {
   try {
     const { email, password, role, domain } = req.body;
@@ -17,6 +18,7 @@ exports.registerUser = async (req, res) => {
   }
 };
 
+// Méthode de connexion
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -28,42 +30,41 @@ exports.login = async (req, res) => {
     const db = await connectDB();
     const userCollection = db.collection('Users');
 
-    // Trouver l'utilisateur par email
     const user = await userCollection.findOne({ email });
 
     if (!user) {
       return res.status(401).json({ message: 'Utilisateur non trouvé' });
     }
 
-    // Vérifier que l'utilisateur a un mot de passe stocké dans la base de données
-    if (!user.password) {
-      return res.status(401).json({ message: 'Mot de passe non défini pour cet utilisateur.' });
-    }
-
-    // Comparer le mot de passe fourni avec le mot de passe hashé stocké
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Mot de passe incorrect' });
     }
 
-    // Générer un token JWT incluant le rôle et le domaine de l'utilisateur
+    // Générer un token JWT
     const token = jwt.sign(
       { userId: user._id, role: user.role, domain: user.domain },
       process.env.JWT_TOKEN,
       { expiresIn: '1h' }
     );
-    console.log(token)
+
+    // Définir le token comme un cookie HttpOnly
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Utiliser HTTPS en production
+      maxAge: 3600000, // 1 heure
+      sameSite: 'Strict', // Empêcher l'envoi de cookies avec des requêtes cross-site
+    });
 
     res.status(200).json({
       message: 'Connexion réussie',
-      token,
       user: {
         id: user._id,
         email: user.email,
         username: user.username,
         role: user.role,
-        domain: user.domain // Inclure le domaine de l'utilisateur
+        domain: user.domain
       }
     });
   } catch (error) {
@@ -71,6 +72,8 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur lors de la connexion' });
   }
 };
+
+// Méthode de récupération du profil utilisateur
 exports.getUserProfile = async (req, res) => {
   try {
     const userId = req.user.userId; // Récupération de l'ID utilisateur à partir du token
@@ -94,4 +97,10 @@ exports.getUserProfile = async (req, res) => {
     console.error('Erreur lors de la récupération du profil utilisateur:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la récupération du profil utilisateur' });
   }
+};
+
+// Méthode de déconnexion
+exports.logout = (req, res) => {
+  res.clearCookie('token'); // Efface le cookie JWT
+  res.status(200).json({ message: 'Déconnexion réussie' });
 };

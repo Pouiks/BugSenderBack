@@ -1,12 +1,13 @@
 // routes/authRoutes.js
 const express = require('express');
-const { registerUser, login, getUserProfile } = require('../controllers/authController');
-const { verifyToken } = require('../middleware/authMiddleware'); // Importer le middleware de vérification de token
+const { registerUser, login, getUserProfile, logout } = require('../controllers/authController');
+const { verifyToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
 router.post('/register', registerUser);
 router.post('/login', login);
-router.get('/profile', verifyToken, getUserProfile); // Utiliser 'verifyToken' pour vérifier l'authentification
+router.get('/profile', verifyToken, getUserProfile);
+router.post('/logout', logout); // Ajouter la route de déconnexion
 
 module.exports = router;
