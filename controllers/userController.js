@@ -18,40 +18,33 @@ exports.getAllUsers = async (req, res) => {
 
 // Créer un nouvel utilisateur
 exports.createUser = async (req, res) => {
-  const { username, email, password, role, domain } = req.body;
-
   try {
+    const { email, username } = req.body;
     const db = await connectDB();
-    const userCollection = db.collection('Users');
-
-    const existingUser = await userCollection.findOne({ email });
+    const usersCollection = db.collection('Users');
+    
+    // Vérifier si un utilisateur avec cet email existe déjà
+    const existingUser = await usersCollection.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'L\'utilisateur existe déjà' });
+      console.log("l'email existe déja")
+      return res.status(409).json({ message: 'Un utilisateur avec cet email existe déjà.' });
     }
+    
+    // Insérer l'utilisateur dans la base de données
+    const newUser = { ...req.body, createdAt: new Date() };
+    const result = await usersCollection.insertOne(newUser);
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = {
-      username,
-      email,
-      passwordHash: hashedPassword,
-      role,
-      domain,
-      createdAt: new Date(),
-    };
-
-    const result = await userCollection.insertOne(newUser);
-
-    res.status(201).json({
-      message: 'Utilisateur créé avec succès',
-      userId: result.insertedId,
-      user: newUser,
-    });
+    res.status(201).json({ message: 'Utilisateur créé avec succès', user: result.ops[0] });
   } catch (error) {
     console.error('Erreur lors de la création de l\'utilisateur:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la création de l\'utilisateur' });
   }
 };
+
+
+
+
+
 
 // Mettre à jour un utilisateur
 exports.updateUser = async (req, res) => {
