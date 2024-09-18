@@ -10,7 +10,10 @@ const { verifyToken } = require('../middleware/authMiddleware');
 const { checkAdmin} = require('../middleware/roleMiddleware');
 const router = express.Router();
 
-router.get('/all', verifyToken, checkAdmin, getAllUsers);
+router.get('/all', verifyToken, (req, res, next) => {
+  console.log('Token vérifié, passant à checkAdmin');
+  next();
+}, checkAdmin, getAllUsers);
 router.post('/create', verifyToken, checkAdmin, createUser);
 router.put('/update/:id', verifyToken, checkAdmin, updateUser);
 router.get('/profile', verifyToken, getUserProfile); // Route pour obtenir le profil utilisateur

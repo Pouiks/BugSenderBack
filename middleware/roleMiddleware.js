@@ -4,11 +4,11 @@ const jwt = require('jsonwebtoken');
 
 // Middleware pour vérifier si l'utilisateur est admin
 exports.checkAdmin = (req, res, next) => {
-  console.log("req.user: ",req.user);
-
-  if (req.user && req.user.role === 'admin') {
-    next(); // Autoriser l'accès si l'utilisateur est admin
-  } else {
-    res.status(403).json({ message: "Accès refusé : droits d'administrateur requis." });
+  console.log('checkAdmin appelé');
+  console.log('Rôle utilisateur :', req.user.role); // Voir si le rôle est bien passé
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Accès réservé aux administrateurs.' });
   }
+  next();
 };
+

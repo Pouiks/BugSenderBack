@@ -8,13 +8,17 @@ exports.getAllUsers = async (req, res) => {
   try {
     const db = await connectDB();
     const usersCollection = db.collection('Users');
-    const users = await usersCollection.find().toArray();
-    res.json(users);
+    const users = await usersCollection.find().toArray(); // Récupérer tous les utilisateurs
+    console.log('Utilisateurs récupérés:', users);
+
+    // Assurez-vous de renvoyer les utilisateurs au frontend
+    res.status(200).json(users); // Renvoyer la liste des utilisateurs avec un code 200
   } catch (error) {
     console.error('Erreur lors de la récupération des utilisateurs:', error);
     res.status(500).json({ message: "Erreur serveur lors de la récupération des utilisateurs", error: error.message });
   }
 };
+
 
 // Créer un nouvel utilisateur
 exports.createUser = async (req, res) => {
