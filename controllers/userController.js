@@ -24,7 +24,7 @@ exports.getAllUsers = async (req, res) => {
 // Créer un nouvel utilisateur
 exports.createUser = async (req, res) => {
   try {
-    const { email, domain } = req.body;
+    const { email, username, domain } = req.body;
     const db = await connectDB();
     const usersCollection = db.collection('Users');
 
@@ -34,27 +34,24 @@ exports.createUser = async (req, res) => {
       return res.status(409).json({ message: 'Un utilisateur avec cet email existe déjà.' });
     }
 
-    // Créer un dossier Google Drive pour l'utilisateur
-    const folderName = `${domain}`;
-    const folderId = await createDriveFolder(folderName);
+    // Créer un dossier Google Drive pour le domaine
+    let folderId = await createDriveFolder(domain);
 
-    // Partager le dossier avec ton compte Google personnel
-    // await shareDriveFolder(folderId, 'tonEmailPersonnel@gmail.com');
-
-    // Insérer l'utilisateur dans la base de données avec l'ID du dossier Google Drive
-    const newUser = {
-      ...req.body,
-      createdAt: new Date(),
-      googleDriveFolderId: folderId, // Stocker l'ID du dossier Google Drive
-    };
+    // Insérer l'utilisateur dans la base de données avec l'ID du dossier Drive
+    const newUser = { ...req.body, folderId, createdAt: new Date() };
     const result = await usersCollection.insertOne(newUser);
 
-    res.status(201).json({ message: 'Utilisateur créé avec succès', user: result.ops[0] });
+    // Récupérer l'utilisateur inséré avec `insertedId`
+    const insertedUser = await usersCollection.findOne({ _id: result.insertedId });
+
+    res.status(201).json({ message: 'Utilisateur créé avec succès', user: insertedUser });
   } catch (error) {
     console.error('Erreur lors de la création de l\'utilisateur:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la création de l\'utilisateur' });
   }
 };
+
+
 
 
 
