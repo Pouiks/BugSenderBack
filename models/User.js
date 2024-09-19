@@ -1,4 +1,3 @@
-// models/User.js
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
@@ -16,6 +15,10 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'client', 'admin'],
     default: 'user',
   },
+  googleDriveFolderId: {
+    type: String, // Ce champ stockera l'ID du dossier Google Drive
+    default: null, // Par défaut, pas de dossier tant qu'il n'est pas créé
+  },
   license: {
     licenseKey: String,
     startDate: {
@@ -27,7 +30,7 @@ const userSchema = new mongoose.Schema({
       type: String,
       enum: ['active', 'expired'],
       default: 'active',
-    }
+    },
   },
   createdAt: {
     type: Date,

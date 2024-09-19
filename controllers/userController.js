@@ -2,6 +2,7 @@
 const connectDB = require('../config/db');
 const bcrypt = require('bcrypt');
 const mongodb = require('mongodb');
+const { createDriveFolder } = require('../googleDriveService'); // Importer le service Google Drive
 
 // Obtenir tous les utilisateurs
 exports.getAllUsers = async (req, res) => {
@@ -23,19 +24,29 @@ exports.getAllUsers = async (req, res) => {
 // Créer un nouvel utilisateur
 exports.createUser = async (req, res) => {
   try {
-    const { email, username } = req.body;
+    const { email, domain } = req.body;
     const db = await connectDB();
     const usersCollection = db.collection('Users');
-    
+
     // Vérifier si un utilisateur avec cet email existe déjà
     const existingUser = await usersCollection.findOne({ email });
     if (existingUser) {
-      console.log("l'email existe déja")
       return res.status(409).json({ message: 'Un utilisateur avec cet email existe déjà.' });
     }
-    
-    // Insérer l'utilisateur dans la base de données
-    const newUser = { ...req.body, createdAt: new Date() };
+
+    // Créer un dossier Google Drive pour l'utilisateur
+    const folderName = `${domain}`;
+    const folderId = await createDriveFolder(folderName);
+
+    // Partager le dossier avec ton compte Google personnel
+    // await shareDriveFolder(folderId, 'tonEmailPersonnel@gmail.com');
+
+    // Insérer l'utilisateur dans la base de données avec l'ID du dossier Google Drive
+    const newUser = {
+      ...req.body,
+      createdAt: new Date(),
+      googleDriveFolderId: folderId, // Stocker l'ID du dossier Google Drive
+    };
     const result = await usersCollection.insertOne(newUser);
 
     res.status(201).json({ message: 'Utilisateur créé avec succès', user: result.ops[0] });
@@ -44,8 +55,6 @@ exports.createUser = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur lors de la création de l\'utilisateur' });
   }
 };
-
-
 
 
 
@@ -99,3 +108,4 @@ exports.getUserProfile = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur lors de la récupération du profil utilisateur' });
   }
 };
+
