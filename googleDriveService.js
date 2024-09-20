@@ -1,17 +1,26 @@
 const { google } = require('googleapis');
 const path = require('path');
+const { Readable } = require('stream'); // Importer Readable pour créer un stream
 
-// Charger la clé privée depuis le fichier JSON téléchargé
 const KEYFILEPATH = path.join(__dirname, 'bugcollectorext-4d06c4924202.json');
 const SCOPES = ['https://www.googleapis.com/auth/drive'];
 
-// Initialiser l'authentification
 const auth = new google.auth.GoogleAuth({
   keyFile: KEYFILEPATH,
   scopes: SCOPES,
 });
 
 const drive = google.drive({ version: 'v3', auth });
+
+/**
+ * Convertir un Buffer en Readable Stream pour l'upload
+ */
+function bufferToStream(buffer) {
+  const stream = new Readable();
+  stream.push(buffer);
+  stream.push(null); // Fin du stream
+  return stream;
+}
 
 /**
  * Fonction pour vérifier si un dossier existe déjà dans Google Drive
@@ -27,11 +36,8 @@ async function checkIfFolderExists(folderName) {
     });
 
     if (response.data.files.length > 0) {
-      const folderId = response.data.files[0].id;
-      console.log(`Dossier déjà existant : ${folderName}, ID: ${folderId}`);
-      return folderId;
+      return response.data.files[0].id;
     } else {
-      console.log(`Aucun dossier trouvé pour : ${folderName}`);
       return null;
     }
   } catch (error) {
@@ -47,7 +53,6 @@ async function checkIfFolderExists(folderName) {
  */
 async function createDriveFolder(folderName) {
   try {
-    // Vérifier si le dossier existe déjà
     let folderId = await checkIfFolderExists(folderName);
 
     if (!folderId) {
@@ -60,9 +65,6 @@ async function createDriveFolder(folderName) {
       });
 
       folderId = response.data.id;
-      console.log(`Dossier créé avec succès : ${folderId}`);
-
-      // Partager le dossier avec le compte admin principal
       await shareDriveFolder(folderId, 'bugcollectorext@gmail.com');
     }
 
@@ -82,17 +84,76 @@ async function shareDriveFolder(folderId, email) {
   try {
     await drive.permissions.create({
       resource: {
-        role: 'writer', // Rôle du compte partagé (writer, reader, etc.)
+        role: 'writer',
         type: 'user',
         emailAddress: email,
       },
       fileId: folderId,
       fields: 'id',
     });
-    console.log(`Dossier partagé avec ${email}`);
   } catch (error) {
     console.error('Erreur lors du partage du dossier :', error);
   }
 }
 
-module.exports = { createDriveFolder, checkIfFolderExists };
+/**
+ * Fonction pour uploader un fichier (screenshot) dans un dossier Google Drive
+ * @param {string} base64Data - La donnée du fichier en base64
+ * @param {string} folderId - L'ID du dossier dans lequel uploader le fichier
+ * @returns {Promise<string>} - L'URL du fichier Google Drive
+ */
+async function uploadFileToDrive(base64Data, folderId) {
+  try {
+    // Convertir le base64 en buffer
+    const buffer = Buffer.from(base64Data.split(",")[1], 'base64');
+
+    // Convertir le buffer en stream pour l'upload
+    const stream = bufferToStream(buffer);
+
+    const response = await drive.files.create({
+      resource: {
+        name: `screenshot_${Date.now()}.png`, // Nommer le fichier avec un timestamp
+        parents: [folderId], // Spécifier le dossier parent
+      },
+      media: {
+        mimeType: 'image/png',
+        body: stream, // Utiliser le stream pour l'upload
+      },
+      fields: 'id, webViewLink',
+    });
+
+    return response.data.webViewLink;
+  } catch (error) {
+    console.error('Erreur lors de l\'upload du fichier:', error);
+    throw error;
+  }
+}
+
+/**
+ * Fonction pour gérer l'upload du screenshot dans le dossier du domaine
+ * @param {string} domainName - Le nom du domaine
+ * @param {string} base64Screenshot - La donnée de la capture d'écran en base64
+ * @returns {Promise<string|null>} - L'URL du screenshot ou null s'il n'y a pas de screenshot
+ */
+async function handleScreenshotUpload(domainName, base64Screenshot) {
+  try {
+    let folderId = await checkIfFolderExists(domainName);
+
+    if (!folderId) {
+      folderId = await createDriveFolder(domainName);
+    }
+
+    if (base64Screenshot) {
+      const screenshotUrl = await uploadFileToDrive(base64Screenshot, folderId);
+      return screenshotUrl;
+    } else {
+      console.log("Aucune capture d'écran fournie.");
+      return null;
+    }
+  } catch (error) {
+    console.error('Erreur dans le processus d\'upload du screenshot:', error);
+    throw error;
+  }
+}
+
+module.exports = { createDriveFolder, checkIfFolderExists, uploadFileToDrive, handleScreenshotUpload };

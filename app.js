@@ -19,7 +19,7 @@ app.use(cors({
     credentials: true, // Permettre l'envoi de cookies
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));  // Ajustez la taille à vos besoins
 app.use(cookieParser()); // Utiliser le middleware pour parser les cookies
 
 app.use('/api/bugs', bugRoutes);

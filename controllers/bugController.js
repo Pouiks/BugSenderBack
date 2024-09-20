@@ -1,21 +1,13 @@
-// controllers/bugController.js
 const connectDB = require('../config/db');
+const Bug = require('../models/bug');
+const { handleScreenshotUpload } = require('../googleDriveService');
 
-// controllers/bugController.js
-// controllers/bugController.js
 exports.getAllBugs = async (req, res) => {
   try {
     const db = await connectDB();
     const bugsCollection = db.collection('DomainsWithBugs');
-
-    // Récupérer tous les bugs de la collection
-    const allBugs = await bugsCollection.find({}).toArray(); // Récupère tous les documents de la collection
-    // console.log("Tout les bugs: ", allBugs)
-    // Combiner tous les bugs si chaque document a un champ `bugs`
+    const allBugs = await bugsCollection.find({}).toArray();
     const bugs = allBugs.flatMap(doc => doc.bugs || []);
-
-    console.log("Bugs récupérés:", bugs);
-
     res.status(200).json(bugs);
   } catch (error) {
     console.error('Erreur lors de la récupération de tous les bugs:', error);
@@ -24,52 +16,74 @@ exports.getAllBugs = async (req, res) => {
 };
 
 exports.getBugsByDomain = async (req, res) => {
-  const domainName = req.params.domainName; // Récupère le domaine de l'utilisateur à partir de l'URL
-
+  const domainName = req.params.domainName;
   try {
     const db = await connectDB();
     const bugsCollection = db.collection('DomainsWithBugs');
-
-    // Utiliser `find` pour récupérer tous les documents correspondants
-    const domainBugs = (await bugsCollection.find({ domainName }).toArray()).reverse(); // Utilise `find` au lieu de `findOne`
-
-    if (!domainBugs.length) { // Vérifier s'il n'y a pas de résultats
+    const domainBugs = (await bugsCollection.find({ domainName }).toArray()).reverse();
+    if (!domainBugs.length) {
       return res.status(404).json({ message: 'Aucun bug trouvé pour ce domaine.' });
     }
-
-    // Si tu veux récupérer uniquement le champ `bugs` de chaque document
-    const bugs = domainBugs.flatMap(doc => doc.bugs); // Combine tous les `bugs` de chaque document en un seul tableau
+    const bugs = domainBugs.flatMap(doc => doc.bugs);
     res.json(bugs.reverse());
-
   } catch (error) {
     console.error('Erreur lors de la récupération des bugs par domaine:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la récupération des bugs.' });
   }
 };
 
-
 exports.createBug = async (req, res) => {
   try {
-      console.log("Données reçues pour la création de bug:", req.body);  // Ajoutez ceci pour déboguer
+    const { domainName, createdBy, createdAt, bugs, screenshot } = req.body;
+    const db = await connectDB();
+    const bugsCollection = db.collection('DomainsWithBugs');
 
-      const { domainName, createdBy, createdAt, bugs, license } = req.body;
+    let domainFolderId;
+    const existingDomain = await bugsCollection.findOne({ domainName });
 
-      // Connexion à la base de données
-      const db = await connectDB(); 
-      const bugsCollection = db.collection('DomainsWithBugs');
-
-      // Insertion du bug dans la collection
-      const result = await bugsCollection.insertOne({
+    if (!existingDomain || !existingDomain.googleDriveFolderId) {
+      domainFolderId = await handleScreenshotUpload(domainName, null);
+      if (existingDomain) {
+        await bugsCollection.updateOne(
+          { domainName },
+          { $set: { googleDriveFolderId: domainFolderId } }
+        );
+      } else {
+        await bugsCollection.insertOne({
           domainName,
-          createdBy,
-          createdAt,
-          bugs,
-      });
+          googleDriveFolderId: domainFolderId,
+          bugs: [],
+        });
+      }
+    } else {
+      domainFolderId = existingDomain.googleDriveFolderId;
+    }
 
-      res.status(201).json({ message: 'Bug créé avec succès', bugId: result.insertedId });
+    let screenshotUrl = null;
+    if (screenshot) {
+      screenshotUrl = await handleScreenshotUpload(domainName, screenshot);
+    }
+
+    const bugData = {
+      ...bugs[0],
+      screenshotUrl,
+      date: new Date().toISOString(),
+      reportedBy: createdBy,
+    };
+
+    const updateResult = await bugsCollection.updateOne(
+      { domainName },
+      { $push: { bugs: bugData } }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      return res.status(500).json({ message: 'Erreur lors de la mise à jour des bugs.' });
+    }
+
+    res.status(201).json({ message: 'Bug créé avec succès', bugData });
+
   } catch (error) {
-      console.error('Erreur lors de la création du bug:', error);
-      res.status(500).json({ message: 'Erreur serveur lors de la création du bug' });
+    console.error('Erreur lors de la création du bug:', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la création du bug' });
   }
 };
-
