@@ -8,6 +8,7 @@ exports.getAllBugs = async (req, res) => {
     const bugsCollection = db.collection('DomainsWithBugs');
     const allBugs = await bugsCollection.find({}).toArray();
     const bugs = allBugs.flatMap(doc => doc.bugs || []);
+    console.log("bugs:",bugs)
     res.status(200).json(bugs);
   } catch (error) {
     console.error('Erreur lors de la récupération de tous les bugs:', error);

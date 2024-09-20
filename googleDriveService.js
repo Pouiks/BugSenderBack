@@ -122,12 +122,18 @@ async function uploadFileToDrive(base64Data, folderId) {
       fields: 'id, webViewLink',
     });
 
-    return response.data.webViewLink;
+    const fileId = response.data.id;
+
+    // Rendre le fichier accessible à n'importe qui avec le lien
+    await makeFilePublic(fileId);
+
+    return response.data.webViewLink; // Retourner le lien pour la vue
   } catch (error) {
     console.error('Erreur lors de l\'upload du fichier:', error);
     throw error;
   }
 }
+
 
 /**
  * Fonction pour gérer l'upload du screenshot dans le dossier du domaine
@@ -155,5 +161,19 @@ async function handleScreenshotUpload(domainName, base64Screenshot) {
     throw error;
   }
 }
-
-module.exports = { createDriveFolder, checkIfFolderExists, uploadFileToDrive, handleScreenshotUpload };
+async function makeFilePublic(fileId) {
+  try {
+    await drive.permissions.create({
+      resource: {
+        role: 'reader',  // Permettre à tout le monde de lire le fichier
+        type: 'anyone',  // Permettre à toute personne ayant le lien de voir le fichier
+      },
+      fileId: fileId,
+      fields: 'id',
+    });
+    console.log(`Fichier avec l'ID ${fileId} est maintenant public.`);
+  } catch (error) {
+    console.error('Erreur lors de la modification des permissions du fichier :', error);
+  }
+}
+module.exports = { createDriveFolder, checkIfFolderExists, uploadFileToDrive, handleScreenshotUpload, makeFilePublic };
