@@ -176,4 +176,21 @@ async function makeFilePublic(fileId) {
     console.error('Erreur lors de la modification des permissions du fichier :', error);
   }
 }
-module.exports = { createDriveFolder, checkIfFolderExists, uploadFileToDrive, handleScreenshotUpload, makeFilePublic };
+
+const deleteScreenshotFromGoogleDrive = async (fileUrl) => {
+  try {
+    const fileId = fileUrl.match(/\/d\/(.*?)\//)[1];  // Extraire l'ID du fichier depuis l'URL Google Drive
+
+    // Utiliser l'objet 'drive' déjà configuré avec l'authentification
+    await drive.files.delete({
+      fileId: fileId,
+    });
+
+    console.log(`Le fichier avec l'ID ${fileId} a été supprimé de Google Drive.`);
+  } catch (error) {
+    console.error('Erreur lors de la suppression du fichier Google Drive :', error);
+    throw new Error('Erreur lors de la suppression du fichier dans Google Drive');
+  }
+};
+
+module.exports = { createDriveFolder, checkIfFolderExists, uploadFileToDrive, handleScreenshotUpload, makeFilePublic, deleteScreenshotFromGoogleDrive };

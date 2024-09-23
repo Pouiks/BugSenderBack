@@ -1,15 +1,22 @@
 const connectDB = require('../config/db');
 const Bug = require('../models/bug');
-const { handleScreenshotUpload } = require('../googleDriveService');
+const { handleScreenshotUpload, deleteScreenshotFromGoogleDrive } = require('../googleDriveService');
+const { ObjectId } = require('mongodb'); // Importer ObjectId
+
 
 exports.getAllBugs = async (req, res) => {
   try {
     const db = await connectDB();
     const bugsCollection = db.collection('DomainsWithBugs');
     const allBugs = await bugsCollection.find({}).toArray();
-    const bugs = allBugs.flatMap(doc => doc.bugs || []);
-    console.log("bugs:",bugs)
-    res.status(200).json(bugs);
+
+    // Ajouter le domainName à chaque bug avant de les envoyer au frontend
+    const bugsWithDomain = allBugs.flatMap(doc => 
+      (doc.bugs || []).map(bug => ({ ...bug, domainName: doc.domainName }))
+    );
+    
+    console.log("Bugs avec domainName:", bugsWithDomain);
+    res.status(200).json(bugsWithDomain);
   } catch (error) {
     console.error('Erreur lors de la récupération de tous les bugs:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la récupération de tous les bugs.' });
@@ -66,6 +73,7 @@ exports.createBug = async (req, res) => {
     }
 
     const bugData = {
+      _id: new ObjectId(), // Générer une nouvelle ID pour le bug
       ...bugs[0],
       screenshotUrl,
       date: new Date().toISOString(),
@@ -86,5 +94,50 @@ exports.createBug = async (req, res) => {
   } catch (error) {
     console.error('Erreur lors de la création du bug:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la création du bug' });
+  }
+};
+
+exports.deleteBugById = async (req, res) => {
+  const { domainName, bugId } = req.params;
+
+  try {
+    const db = await connectDB();
+    const bugsCollection = db.collection('DomainsWithBugs');
+
+    // Trouver le domaine correspondant au domainName
+    const domain = await bugsCollection.findOne({ domainName });
+    if (!domain) {
+      return res.status(404).json({ message: 'Domaine non trouvé' });
+    }
+
+    // Vérifier si le bug avec l'ID spécifié existe dans ce domaine
+    const bugIndex = domain.bugs.findIndex(bug => bug._id.toString() === bugId);
+    if (bugIndex === -1) {
+      return res.status(404).json({ message: 'Bug non trouvé' });
+    }
+
+    // Supprimer le screenshot de Google Drive si nécessaire
+    const bug = domain.bugs[bugIndex];
+    if (bug.screenshotUrl) {
+      await deleteScreenshotFromGoogleDrive(bug.screenshotUrl); // Fonction pour supprimer le fichier sur Google Drive
+    }
+
+    // Supprimer le bug du tableau de bugs
+    domain.bugs.splice(bugIndex, 1);
+
+    // Mettre à jour le domaine avec le tableau bugs modifié
+    const updateResult = await bugsCollection.updateOne(
+      { domainName },
+      { $set: { bugs: domain.bugs } }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      return res.status(500).json({ message: 'Erreur lors de la mise à jour après suppression du bug.' });
+    }
+
+    res.status(200).json({ message: 'Bug supprimé avec succès.' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression du bug:', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la suppression du bug.' });
   }
 };
