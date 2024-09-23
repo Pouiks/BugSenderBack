@@ -1,41 +1,71 @@
-const mongoose = require('mongoose');
+const { ObjectId } = require('mongodb');
 
-const userSchema = new mongoose.Schema({
+const userSchema = {
   username: {
-    type: String,
+    type: 'string',
     required: true,
   },
   email: {
-    type: String,
+    type: 'string',
     required: true,
     unique: true,
   },
   role: {
-    type: String,
+    type: 'string',
     enum: ['user', 'client', 'admin'],
     default: 'user',
   },
   googleDriveFolderId: {
-    type: String, // Ce champ stockera l'ID du dossier Google Drive
-    default: null, // Par défaut, pas de dossier tant qu'il n'est pas créé
+    type: 'string',  // Ce champ stocke l'ID du dossier Google Drive
+    default: null,
   },
-  license: {
-    licenseKey: String,
-    startDate: {
-      type: Date,
-      default: Date.now,
-    },
-    endDate: Date,
-    status: {
-      type: String,
-      enum: ['active', 'expired'],
-      default: 'active',
-    },
+  resetToken: {
+    type: 'string',  // Token pour la réinitialisation de mot de passe
+  },
+  resetTokenExpiry: {
+    type: 'date',  // Expiration du token de réinitialisation de mot de passe
+  },
+  password: {
+    type: 'string',  // Mot de passe hashé
   },
   createdAt: {
-    type: Date,
-    default: Date.now,
+    type: 'date',
+    default: new Date(),
   },
-});
+};
 
-module.exports = mongoose.model('User', userSchema);
+// Fonction pour insérer un nouvel utilisateur dans MongoDB
+async function insertUser(db, userData) {
+  try {
+    const usersCollection = db.collection('Users');
+    const result = await usersCollection.insertOne(userData);
+    return result;
+  } catch (error) {
+    throw new Error('Erreur lors de l\'insertion de l\'utilisateur en base de données : ' + error.message);
+  }
+}
+
+// Fonction pour trouver un utilisateur par email
+async function findUserByEmail(db, email) {
+  try {
+    const usersCollection = db.collection('Users');
+    return await usersCollection.findOne({ email });
+  } catch (error) {
+    throw new Error('Erreur lors de la recherche de l\'utilisateur par email : ' + error.message);
+  }
+}
+
+// Fonction pour mettre à jour un utilisateur par ID
+async function updateUser(db, userId, updateData) {
+  try {
+    const usersCollection = db.collection('Users');
+    return await usersCollection.updateOne(
+      { _id: new ObjectId(userId) },
+      { $set: updateData }
+    );
+  } catch (error) {
+    throw new Error('Erreur lors de la mise à jour de l\'utilisateur : ' + error.message);
+  }
+}
+
+module.exports = { userSchema, insertUser, findUserByEmail, updateUser };

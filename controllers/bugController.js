@@ -104,35 +104,21 @@ exports.deleteBugById = async (req, res) => {
     const db = await connectDB();
     const bugsCollection = db.collection('DomainsWithBugs');
 
-    // Trouver le domaine correspondant au domainName
-    const domain = await bugsCollection.findOne({ domainName });
-    if (!domain) {
-      return res.status(404).json({ message: 'Domaine non trouvé' });
-    }
-
-    // Vérifier si le bug avec l'ID spécifié existe dans ce domaine
-    const bugIndex = domain.bugs.findIndex(bug => bug._id.toString() === bugId);
-    if (bugIndex === -1) {
-      return res.status(404).json({ message: 'Bug non trouvé' });
-    }
-
-    // Supprimer le screenshot de Google Drive si nécessaire
-    const bug = domain.bugs[bugIndex];
-    if (bug.screenshotUrl) {
-      await deleteScreenshotFromGoogleDrive(bug.screenshotUrl); // Fonction pour supprimer le fichier sur Google Drive
-    }
-
-    // Supprimer le bug du tableau de bugs
-    domain.bugs.splice(bugIndex, 1);
-
-    // Mettre à jour le domaine avec le tableau bugs modifié
-    const updateResult = await bugsCollection.updateOne(
-      { domainName },
-      { $set: { bugs: domain.bugs } }
+    // Mettre à jour en retirant le bug correspondant à bugId
+    const domain = await bugsCollection.findOneAndUpdate(
+      { domainName, "bugs._id": ObjectId(bugId) },  // Trouver le domaine avec le bug correspondant
+      { $pull: { bugs: { _id: ObjectId(bugId) } } },  // Retirer le bug de la liste
+      { returnOriginal: true }
     );
 
-    if (updateResult.modifiedCount === 0) {
-      return res.status(500).json({ message: 'Erreur lors de la mise à jour après suppression du bug.' });
+    if (!domain.value) {
+      return res.status(404).json({ message: 'Bug ou domaine non trouvé.' });
+    }
+
+    // Supprimer le screenshot associé du Google Drive si nécessaire
+    const bug = domain.value.bugs.find(bug => bug._id.toString() === bugId);
+    if (bug.screenshotUrl) {
+      await deleteScreenshotFromGoogleDrive(bug.screenshotUrl);
     }
 
     res.status(200).json({ message: 'Bug supprimé avec succès.' });
@@ -141,3 +127,4 @@ exports.deleteBugById = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur lors de la suppression du bug.' });
   }
 };
+

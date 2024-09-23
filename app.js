@@ -5,6 +5,8 @@ const connectDB = require('./config/db');
 const bugRoutes = require('./routes/bugRoutes');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const passwordRoutes = require('./routes/passwordRoutes');
+
 const cors = require('cors');
 
 dotenv.config();
@@ -25,6 +27,7 @@ app.use(cookieParser()); // Utiliser le middleware pour parser les cookies
 app.use('/api/bugs', bugRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/password', passwordRoutes);
 
 async function startServer() {
   try {

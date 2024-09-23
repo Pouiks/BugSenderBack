@@ -1,4 +1,4 @@
-const mongodb = require('mongodb');
+const { ObjectId } = require('mongodb');
 
 const bugSchema = {
   domainName: {
@@ -10,8 +10,8 @@ const bugSchema = {
     required: true,
   },
   screenshotUrl: {
-    type: 'string', // URL du screenshot dans Google Drive
-    default: null, // Facultatif si le screenshot n'est pas fourni
+    type: 'string',  // URL du screenshot dans Google Drive
+    default: null,
   },
   bugs: [
     {
@@ -55,4 +55,29 @@ async function insertBug(db, bugData) {
   }
 }
 
-module.exports = { bugSchema, insertBug };
+// Fonction pour récupérer les bugs par domaine
+async function findBugsByDomain(db, domainName) {
+  try {
+    const bugsCollection = db.collection('DomainsWithBugs');
+    const domainBugs = await bugsCollection.find({ domainName }).toArray();
+    return domainBugs;
+  } catch (error) {
+    throw new Error('Erreur lors de la récupération des bugs : ' + error.message);
+  }
+}
+
+// Fonction pour supprimer un bug par son ID
+async function deleteBugById(db, domainName, bugId) {
+  try {
+    const bugsCollection = db.collection('DomainsWithBugs');
+    const result = await bugsCollection.updateOne(
+      { domainName },
+      { $pull: { bugs: { _id: ObjectId(bugId) } } }
+    );
+    return result;
+  } catch (error) {
+    throw new Error('Erreur lors de la suppression du bug : ' + error.message);
+  }
+}
+
+module.exports = { bugSchema, insertBug, findBugsByDomain, deleteBugById };
