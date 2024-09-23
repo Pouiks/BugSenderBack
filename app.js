@@ -27,7 +27,7 @@ app.use(cookieParser()); // Utiliser le middleware pour parser les cookies
 app.use('/api/bugs', bugRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/password', passwordRoutes);
+app.use('/api/users', passwordRoutes);
 
 async function startServer() {
   try {

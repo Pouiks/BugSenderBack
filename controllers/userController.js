@@ -3,10 +3,15 @@ const connectDB = require('../config/db');
 const bcrypt = require('bcrypt');
 const mongodb = require('mongodb');
 const crypto = require('crypto');  // Importer pour générer le token
+const { insertUser, findUserByEmail, updateUser } = require('../models/User'); // Importer les fonctions MongoDB
+const { ObjectId } = require('mongodb');  // MongoDB ObjectId
+
 const { sendPasswordSetupEmail } = require('../services/emailService');  // Importer le service pour l'envoi d'email
 const { checkIfFolderExists, createDriveFolder } = require('../googleDriveService');  // Importer la vérification et création de dossier
 
 // Créer un nouvel utilisateur
+// Créer un nouvel utilisateur avec un token valable 24h
+// Créer un nouvel utilisateur avec un token valable 24h
 exports.createUser = async (req, res) => {
   try {
     const { email, username, domain } = req.body;
@@ -25,8 +30,9 @@ exports.createUser = async (req, res) => {
       folderId = await createDriveFolder(domain);
     }
 
-    // Générer un token sécurisé pour la création de mot de passe
+    // Générer un token sécurisé et le faire expirer dans 24 heures
     const token = crypto.randomBytes(32).toString('hex');
+    const tokenExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 heures en millisecondes
 
     // Ajouter l'utilisateur dans la base de données avec le token et l'ID du dossier Drive
     const newUser = {
@@ -35,23 +41,27 @@ exports.createUser = async (req, res) => {
       domain,
       googleDriveFolderId: folderId,
       resetToken: token,
-      resetTokenExpiry: Date.now() + 3600000,  // Token expire dans 1 heure
+      resetTokenExpiry: tokenExpiry,
       createdAt: new Date(),
       password: null,  // Pas de mot de passe défini pour l'instant
     };
 
+    // Insérer l'utilisateur et récupérer directement l'utilisateur inséré via le champ `insertedId`
     const result = await usersCollection.insertOne(newUser);
+
+    const insertedUser = await usersCollection.findOne({ _id: result.insertedId });
 
     // Envoyer un email à l'utilisateur avec le lien de configuration du mot de passe
     await sendPasswordSetupEmail(email, token);
 
-    res.status(201).json({ message: 'Utilisateur créé avec succès et email envoyé.', user: result.ops[0] });
+    res.status(201).json({ message: 'Utilisateur créé avec succès et email envoyé.', user: insertedUser });
   } catch (error) {
     console.error('Erreur lors de la création de l\'utilisateur:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la création de l\'utilisateur' });
   }
 };
 
+// Mettre à jour le mot de passe via le token
 exports.updatePassword = async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
@@ -60,11 +70,14 @@ exports.updatePassword = async (req, res) => {
     const db = await connectDB();
     const usersCollection = db.collection('Users');
 
-    // Trouver l'utilisateur par token
-    const user = await usersCollection.findOne({ resetToken: token, resetTokenExpiry: { $gt: Date.now() } });
-    
+    // Rechercher l'utilisateur avec le token valide
+    const user = await usersCollection.findOne({
+      resetToken: token,
+      resetTokenExpiry: { $gt: Date.now() }, // Vérifier que le token n'a pas expiré
+    });
+
     if (!user) {
-      return res.status(400).json({ message: 'Token invalide ou expiré.' });
+      return res.status(400).json({ message: 'Utilisateur non trouvé ou token expiré.' });
     }
 
     // Hacher le mot de passe avec bcrypt
@@ -73,10 +86,14 @@ exports.updatePassword = async (req, res) => {
 
     // Mettre à jour l'utilisateur avec le nouveau mot de passe
     await usersCollection.updateOne(
-      { _id: new mongodb.ObjectId(user._id) },
+      { email: user.email },
       {
-        $set: { password: hashedPassword },
-        $unset: { resetToken: "", resetTokenExpiry: "" }  // Supprimer le token et l'expiration
+        $set: {
+          password: hashedPassword,
+          resetToken: undefined,  // Supprimer le token après la mise à jour du mot de passe
+          resetTokenExpiry: undefined,
+          status: 'active',  // L'utilisateur devient actif
+        },
       }
     );
 
@@ -86,6 +103,9 @@ exports.updatePassword = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur.' });
   }
 };
+
+
+
 
 
 // Obtenir tous les utilisateurs
