@@ -42,7 +42,8 @@ exports.getBugsByDomain = async (req, res) => {
 
 exports.createBug = async (req, res) => {
   try {
-    const { domainName, createdBy, createdAt, bugs, screenshot } = req.body;
+    console.log("TEST REPORTEDBY", req.body.bugs[0].reportedBy); // Correction ici
+    const { domainName, bugs, screenshot } = req.body; // Enlever reportedBy d'ici
     const db = await connectDB();
     const bugsCollection = db.collection('DomainsWithBugs');
 
@@ -73,11 +74,10 @@ exports.createBug = async (req, res) => {
     }
 
     const bugData = {
-      _id: new ObjectId(), // Générer une nouvelle ID pour le bug
-      ...bugs[0],
+      _id: new ObjectId(),
+      ...bugs[0], // Inclure toutes les informations du bug, y compris reportedBy
       screenshotUrl,
       date: new Date().toISOString(),
-      reportedBy: createdBy,
     };
 
     const updateResult = await bugsCollection.updateOne(
