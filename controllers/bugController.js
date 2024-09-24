@@ -104,27 +104,38 @@ exports.deleteBugById = async (req, res) => {
     const db = await connectDB();
     const bugsCollection = db.collection('DomainsWithBugs');
 
-    // Mettre à jour en retirant le bug correspondant à bugId
+    // Ajout d'un log pour voir les paramètres
+    console.log("Suppression du bug:", { domainName, bugId });
+
     const domain = await bugsCollection.findOneAndUpdate(
-      { domainName, "bugs._id": ObjectId(bugId) },  // Trouver le domaine avec le bug correspondant
-      { $pull: { bugs: { _id: ObjectId(bugId) } } },  // Retirer le bug de la liste
-      { returnOriginal: true }
+      { domainName, "bugs._id": new ObjectId(bugId) },  // Utilisation correcte de ObjectId
+      { $pull: { bugs: { _id: new ObjectId(bugId) } } },  // Retrait du bug correspondant
+      { returnDocument: 'before' }  // Retourner le document avant la mise à jour
     );
 
-    if (!domain.value) {
+    // Vérifier si le domaine a bien été trouvé et que le bug existe
+    if (!domain || !domain.domainName) {
+      console.log('Aucun domaine ou bug trouvé');
       return res.status(404).json({ message: 'Bug ou domaine non trouvé.' });
     }
 
-    // Supprimer le screenshot associé du Google Drive si nécessaire
-    const bug = domain.value.bugs.find(bug => bug._id.toString() === bugId);
-    if (bug.screenshotUrl) {
+    console.log("Domaine trouvé :", domain.domainName);
+
+    const bug = domain.bugs.find(bug => bug._id.toString() === bugId);
+    console.log("Bug trouvé :", bug);
+
+    if (bug && bug.screenshotUrl) {
+      // Log avant de supprimer le screenshot
+      console.log("Suppression du screenshot associé :", bug.screenshotUrl);
       await deleteScreenshotFromGoogleDrive(bug.screenshotUrl);
     }
 
+    console.log("suppression"); // Log pour confirmer la suppression complète
     res.status(200).json({ message: 'Bug supprimé avec succès.' });
   } catch (error) {
     console.error('Erreur lors de la suppression du bug:', error);
     res.status(500).json({ message: 'Erreur serveur lors de la suppression du bug.' });
   }
 };
+
 
