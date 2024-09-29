@@ -54,7 +54,7 @@ exports.login = async (req, res) => {
       httpOnly: true,
       secure: false, // Utiliser HTTPS en production
       maxAge: 3600000, // 1 heure
-      sameSite: 'Lax', // Empêcher l'envoi de cookies avec des requêtes cross-site
+      sameSite: 'none', // Empêcher l'envoi de cookies avec des requêtes cross-site
     });
 
     res.status(200).json({
