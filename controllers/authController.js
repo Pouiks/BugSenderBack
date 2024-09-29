@@ -56,6 +56,7 @@ exports.login = async (req, res) => {
       maxAge: 3600000, // 1 heure
       sameSite: 'none', // Empêcher l'envoi de cookies avec des requêtes cross-site
     });
+    console.log("Token généré :", token);
 
     res.status(200).json({
       message: 'Connexion réussie',
