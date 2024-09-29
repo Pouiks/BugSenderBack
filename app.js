@@ -1,12 +1,13 @@
+// app.js
+
 const express = require('express');
 const dotenv = require('dotenv');
-const cookieParser = require('cookie-parser'); // Importer cookie-parser
-const connectDB = require('./config/db');
+const cookieParser = require('cookie-parser');
+const connectDB = require('./config/db'); // Votre fonction pour connecter MongoDB
 const bugRoutes = require('./routes/bugRoutes');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const passwordRoutes = require('./routes/passwordRoutes');
-
 const cors = require('cors');
 
 dotenv.config();
@@ -15,23 +16,20 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-    origin: ['chrome-extension://kgpljjpjggbielmjjljcehnjbhiifdmj', "http://localhost:5173", "chrome-extension://eogajffgphpgmfcciaiehhcbkilmjikh", ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true, // Permettre l'envoi de cookies
+  origin: ['http://localhost:5173'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 }));
 
-app.use(express.json({ limit: '10mb' }));  // Ajustez la taille à vos besoins
-app.use(cookieParser()); // Utiliser le middleware pour parser les cookies
+app.use(express.json({ limit: '10mb' }));
+app.use(cookieParser());
 
-app.use('/api/bugs', bugRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/users', passwordRoutes);
-
+// Connecter MongoDB une seule fois
 async function startServer() {
   try {
-    await connectDB();
+    await connectDB(); // Connexion à MongoDB une fois au démarrage
+    console.log('Connected to MongoDB');
     app.listen(PORT, () => {
       console.log(`Server is running on http://localhost:${PORT}`);
     });
@@ -41,3 +39,9 @@ async function startServer() {
 }
 
 startServer();
+
+// Routes
+app.use('/api/bugs', bugRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/users', passwordRoutes);
