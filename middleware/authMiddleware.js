@@ -1,6 +1,6 @@
 // middlewares/authMiddleware.js
 
-const jwt = require('jsonwebtoken'); // Ajoute cette ligne si elle manque
+const jwt = require('jsonwebtoken');
 
 exports.verifyToken = (req, res, next) => {
   let token = req.cookies.token; // Essayer de récupérer le token depuis les cookies
@@ -21,12 +21,9 @@ exports.verifyToken = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_TOKEN);
     req.user = decoded;
     console.log('Utilisateur authentifié :', req.user);
-    next(); // Important d'appeler next() ici pour poursuivre le middleware suivant
+    next(); // Important d'appeler next() ici pour poursuivre
   } catch (error) {
     console.log('Échec de la vérification du token :', error);
     return res.status(401).json({ message: 'Token invalide ou expiré' });
   }
 };
-
-
-
