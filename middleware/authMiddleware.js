@@ -2,29 +2,22 @@
 
 const jwt = require('jsonwebtoken');
 
+// middlewares/authMiddleware.js
+const jwt = require('jsonwebtoken');
+
 exports.verifyToken = (req, res, next) => {
-  let token = req.cookies.token; // Utiliser le cookie
-
-  if (!token && req.headers.authorization) {
-    // Sinon, essayer de récupérer le token depuis l'en-tête Authorization
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1]; // Extraire le token après "Bearer"
-    }
-  }
-
-  if (!token) {
-    console.log('Token manquant');
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'Accès non autorisé, token manquant' });
   }
 
+  const token = authHeader.split(' ')[1]; // Extraire le token après "Bearer"
   try {
     const decoded = jwt.verify(token, process.env.JWT_TOKEN);
     req.user = decoded;
-    console.log('Utilisateur authentifié :', req.user);
-    next(); // Important d'appeler next() ici pour continuer
+    next(); // Poursuivre
   } catch (error) {
-    console.log('Échec de la vérification du token :', error);
     return res.status(401).json({ message: 'Token invalide ou expiré' });
   }
 };
+
