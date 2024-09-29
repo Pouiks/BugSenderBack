@@ -3,7 +3,15 @@
 const jwt = require('jsonwebtoken'); // Ajoute cette ligne si elle manque
 
 exports.verifyToken = (req, res, next) => {
-  const token = req.cookies.token;
+  let token = req.cookies.token; // Essayer de récupérer le token depuis les cookies
+  if (!token && req.headers.authorization) {
+    // Essayer de récupérer le token depuis le header Authorization
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1]; // Extraire le token après "Bearer"
+    }
+  }
+
   if (!token) {
     console.log('Token manquant');
     return res.status(401).json({ message: 'Accès non autorisé, token manquant' });
@@ -19,5 +27,6 @@ exports.verifyToken = (req, res, next) => {
     return res.status(401).json({ message: 'Token invalide ou expiré' });
   }
 };
+
 
 
