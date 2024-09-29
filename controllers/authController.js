@@ -52,9 +52,9 @@ exports.login = async (req, res) => {
     // Définir le token comme un cookie HttpOnly
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Utiliser HTTPS en production
+      secure: false, // Utiliser HTTPS en production
       maxAge: 3600000, // 1 heure
-      sameSite: 'Strict', // Empêcher l'envoi de cookies avec des requêtes cross-site
+      sameSite: 'Lax', // Empêcher l'envoi de cookies avec des requêtes cross-site
     });
 
     res.status(200).json({
